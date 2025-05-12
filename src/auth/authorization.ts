@@ -26,38 +26,38 @@ export function hasPermission(
     return false;
   }
 
-  // Verificar permisos basados en la acción
-  switch (action) {
-    case 'create':
-      return !!permissions.canCreate;
+  // Objeto de mapeo para verificar permisos basados en la acción
+  const permissionCheckers = {
+    'create': () => !!permissions.canCreate,
     
-    case 'edit':
+    'edit': () => {
       if (!formStatus || !Array.isArray(permissions.canEdit)) {
         return false;
       }
       return permissions.canEdit.includes(formStatus);
+    },
     
-    case 'submitToInternalReview':
-      return !!permissions.canSubmitToInternalReview;
+    'submitToInternalReview': () => !!permissions.canSubmitToInternalReview,
     
-    case 'submitToAuthorityReview':
-      return !!permissions.canSubmitToAuthorityReview;
+    'submitToAuthorityReview': () => !!permissions.canSubmitToAuthorityReview,
     
-    case 'approve':
+    'approve': () => {
       if (!formStatus || !Array.isArray(permissions.canApprove)) {
         return false;
       }
       return permissions.canApprove.includes(formStatus);
+    },
     
-    case 'requestCorrections':
+    'requestCorrections': () => {
       if (!formStatus || !Array.isArray(permissions.canRequestCorrections)) {
         return false;
       }
       return permissions.canRequestCorrections.includes(formStatus);
-    
-    default:
-      return false;
-  }
+    }
+  };
+  
+  // Ejecutar el verificador correspondiente o devolver false si no existe
+  return permissionCheckers[action]?.() || false;
 }
 
 /**

@@ -30,19 +30,17 @@ export const CLIENT_ROLES = {
   AUTORIDAD_2: 'autoridad_2'
 } as const;
 
+// Mapeo de roles de cliente a roles de usuario
+const ROL_TO_USER_ROLE: Record<string, UserRole> = {
+  [CLIENT_ROLES.MINERA_1]: UserRole.CREATOR,
+  [CLIENT_ROLES.MINERA_3]: UserRole.INTERNAL_REVIEWER,
+  [CLIENT_ROLES.AUTORIDAD_2]: UserRole.AUTHORITY_REVIEWER,
+};
+
 // Función para mapear el rol del token al enum UserRole
 function mapRolToUserRole(rol: string): UserRole {
-  // Mapeo de roles según la documentación
-  switch (rol) {
-    case CLIENT_ROLES.MINERA_1:
-      return UserRole.CREATOR;
-    case CLIENT_ROLES.MINERA_3:
-      return UserRole.INTERNAL_REVIEWER;
-    case CLIENT_ROLES.AUTORIDAD_2:
-      return UserRole.AUTHORITY_REVIEWER;
-    default:
-      return UserRole.CREATOR; // Valor por defecto
-  }
+  // Usar el mapeo o devolver un valor por defecto si no existe
+  return ROL_TO_USER_ROLE[rol] || UserRole.CREATOR;
 }
 
 // Esquema para validar un comentario de paso
