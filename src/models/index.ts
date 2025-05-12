@@ -3,12 +3,45 @@ import { FormStatus, StepStatus, UserRole } from '../types';
 
 // Esquema para validar el JWT payload
 export const jwtPayloadSchema = z.object({
-  sub: z.string(),
-  role: z.nativeEnum(UserRole),
-  clientId: z.string(),
+  // Campos del token real
+  id: z.string(),
+  username: z.string(),
+  email: z.string().email(),
+  client_id: z.string(),
+  rol: z.string(),
   exp: z.number(),
-  iat: z.number(),
-});
+  // Campos opcionales
+  password: z.string().optional(),
+  _partial: z.boolean().optional(),
+  _saved_in_db: z.boolean().optional(),
+  _custom_generated_pk: z.boolean().optional(),
+}).transform(data => ({
+  ...data,
+  // Transformar a la estructura esperada por el código existente
+  sub: data.id,
+  role: mapRolToUserRole(data.rol),
+  clientId: data.client_id
+}));
+
+// Constantes para los roles de clientes
+export const CLIENT_ROLES = {
+  MINERA_1: 'minera_1',
+  MINERA_3: 'minera_3',
+  AUTORIDAD_2: 'autoridad_2'
+} as const;
+
+// Mapeo de roles de cliente a roles de usuario
+const ROL_TO_USER_ROLE: Record<string, UserRole> = {
+  [CLIENT_ROLES.MINERA_1]: UserRole.CREATOR,
+  [CLIENT_ROLES.MINERA_3]: UserRole.INTERNAL_REVIEWER,
+  [CLIENT_ROLES.AUTORIDAD_2]: UserRole.AUTHORITY_REVIEWER,
+};
+
+// Función para mapear el rol del token al enum UserRole
+function mapRolToUserRole(rol: string): UserRole {
+  // Usar el mapeo o devolver un valor por defecto si no existe
+  return ROL_TO_USER_ROLE[rol] || UserRole.CREATOR;
+}
 
 // Esquema para validar un comentario de paso
 export const stepCommentSchema = z.object({

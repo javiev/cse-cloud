@@ -20,25 +20,34 @@ export async function errorMiddleware(c: Context<{ Bindings: CloudflareBindings 
         details: error.errors,
       }, 400);
     } else if (error instanceof Error) {
-      // Mapear mensajes de error conocidos a códigos HTTP apropiados
-      switch (error.message) {
-        case ERROR_MESSAGES.UNAUTHORIZED:
-          return c.json({ error: error.message }, 403);
-        case ERROR_MESSAGES.FORM_NOT_FOUND:
-        case ERROR_MESSAGES.STEP_NOT_FOUND:
-          return c.json({ error: error.message }, 404);
-        case ERROR_MESSAGES.INVALID_STATUS_TRANSITION:
-        case ERROR_MESSAGES.INVALID_INPUT:
-          return c.json({ error: error.message }, 400);
-        default:
-          // Enviar a Sentry u otro servicio de monitoreo si está configurado
-          if (c.env.ENVIRONMENT !== 'dev') {
-            // Aquí se integraría con Sentry
-            console.error('Error no manejado:', error);
-          }
-          
-          return c.json({ error: ERROR_MESSAGES.INTERNAL_ERROR }, 500);
+      // Mapeo de mensajes de error a códigos HTTP y manejadores
+      const errorHandlers: Record<string, () => Response> = {
+        // Errores de autorización (403)
+        [ERROR_MESSAGES.UNAUTHORIZED]: () => c.json({ error: error.message }, 403),
+        
+        // Errores de recurso no encontrado (404)
+        [ERROR_MESSAGES.FORM_NOT_FOUND]: () => c.json({ error: error.message }, 404),
+        [ERROR_MESSAGES.STEP_NOT_FOUND]: () => c.json({ error: error.message }, 404),
+        
+        // Errores de validación o entrada inválida (400)
+        [ERROR_MESSAGES.INVALID_STATUS_TRANSITION]: () => c.json({ error: error.message }, 400),
+        [ERROR_MESSAGES.INVALID_INPUT]: () => c.json({ error: error.message }, 400),
+      };
+      
+      // Ejecutar el manejador correspondiente o manejar como error interno
+      const handler = errorHandlers[error.message];
+      if (handler) {
+        return handler();
       }
+      
+      // Manejador por defecto para errores no especificados
+      // Enviar a Sentry u otro servicio de monitoreo si está configurado
+      if (c.env.ENVIRONMENT !== 'dev') {
+        // Aquí se integraría con Sentry
+        console.error('Error no manejado:', error);
+      }
+      
+      return c.json({ error: ERROR_MESSAGES.INTERNAL_ERROR }, 500);
     }
     
     // Error genérico

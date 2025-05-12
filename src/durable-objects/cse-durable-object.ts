@@ -1,6 +1,7 @@
-import { CSEForm, FormStatus, JWTPayload, StepStatus } from '../types';
-import { StepId, createStep, initializeSteps, FORM_STEPS, FormStep } from '../types/form-steps';
+import { CSEForm, FormStatus, JWTPayload, StepStatus, UserRole, FormStep } from '../types';
+import { StepId, createStep, initializeSteps, FORM_STEPS } from '../types/form-steps';
 import { ERROR_MESSAGES } from '../constants';
+import { INTERNAL_URLS } from '../constants/urls';
 import { isValidStatusTransition } from '../auth/authorization';
 
 /**
@@ -10,9 +11,11 @@ import { isValidStatusTransition } from '../auth/authorization';
 export class CSEDurableObject {
   state: DurableObjectState;
   form: CSEForm | null = null;
+  env: any; // Para acceder a otros DOs y servicios
 
-  constructor(state: DurableObjectState) {
+  constructor(state: DurableObjectState, env: any) {
     this.state = state;
+    this.env = env;
   }
 
   /**
@@ -55,11 +58,13 @@ export class CSEDurableObject {
    */
   async getForm(): Promise<CSEForm> {
     if (!this.form) {
-      this.form = await this.state.storage.get<CSEForm>('form');
+      const storedForm = await this.state.storage.get<CSEForm>('form');
       
-      if (!this.form) {
+      if (!storedForm) {
         throw new Error(ERROR_MESSAGES.FORM_NOT_FOUND);
       }
+      
+      this.form = storedForm;
     }
     
     return this.form;
@@ -67,8 +72,20 @@ export class CSEDurableObject {
 
   /**
    * Actualiza un paso del formulario
+   * @param stepId - ID del paso a actualizar
+   * @param data - Datos a actualizar en el paso
+   * @param status - Nuevo estado del paso (opcional)
+   * @param needsCorrection - Indica si el paso necesita corrección (opcional)
+   * @param user - Información del usuario que realiza la actualización
+   * @returns Formulario actualizado
    */
-  async updateStep(stepId: StepId, data: any, status: StepStatus | undefined, user: JWTPayload): Promise<CSEForm> {
+  async updateStep(
+    stepId: StepId, 
+    data: any, 
+    status: StepStatus | undefined, 
+    user: JWTPayload, 
+    needsCorrection?: boolean
+  ): Promise<CSEForm> {
     const form = await this.getForm();
     const now = new Date().toISOString();
     
@@ -77,15 +94,58 @@ export class CSEDurableObject {
       throw new Error(`Paso ${stepId} no encontrado`);
     }
     
+    // Lógica para diferentes roles
+    if (user.role === UserRole.CREATOR) {
+      // Si el creador está corrigiendo, verificar que el paso esté marcado para corrección
+      if (
+        (form.status === FormStatus.CORRECTIONS_NEEDED_BY_INTERNAL_REVIEWER || 
+         form.status === FormStatus.CORRECTIONS_NEEDED_BY_AUTHORITY_REVIEWER)
+      ) {
+        const step = form.steps[stepId] as FormStep;
+        if (!step.needsCorrection) {
+          throw new Error(`No tienes permiso para editar este paso. Solo puedes editar los pasos marcados para corrección.`);
+        }
+        // Al corregir un paso, se marca como que ya no necesita corrección
+        needsCorrection = false;
+      }
+    } else if (
+      (user.role === UserRole.INTERNAL_REVIEWER && form.status === FormStatus.PENDING_REVIEW_BY_INTERNAL_REVIEWER) ||
+      (user.role === UserRole.AUTHORITY_REVIEWER && form.status === FormStatus.PENDING_REVIEW_BY_AUTHORITY_REVIEWER)
+    ) {
+      // Los revisores pueden marcar pasos para corrección durante su revisión
+      // No modifican los datos, solo el estado y si necesita corrección
+      data = {}; // Los revisores no modifican los datos del paso
+    } else {
+      throw new Error(`No tienes permiso para modificar este paso en el estado actual del formulario.`);
+    }
+    
     // Actualizar paso existente
     const currentStep = form.steps[stepId] as FormStep;
     form.steps[stepId] = {
       ...currentStep,
       data: { ...currentStep.data, ...data },
       status: status || currentStep.status,
+      needsCorrection: needsCorrection !== undefined ? needsCorrection : currentStep.needsCorrection,
       lastUpdatedBy: user.sub,
       lastUpdatedAt: now,
     };
+    
+    // Si es un revisor marcando un paso para corrección, no cambiamos el estado del formulario aún
+    // Solo cuando se envía explícitamente la solicitud de correcciones se cambia el estado
+    
+    // Si es el creador corrigiendo, verificamos si todos los pasos han sido corregidos
+    if (user.role === UserRole.CREATOR && needsCorrection === false) {
+      const allCorrectionsDone = Object.values(form.steps).every(step => !(step as FormStep).needsCorrection);
+      
+      // Si ya no hay pasos que necesiten corrección, podemos cambiar el estado del formulario
+      if (allCorrectionsDone) {
+        if (form.status === FormStatus.CORRECTIONS_NEEDED_BY_INTERNAL_REVIEWER) {
+          form.status = FormStatus.PENDING_REVIEW_BY_INTERNAL_REVIEWER;
+        } else if (form.status === FormStatus.CORRECTIONS_NEEDED_BY_AUTHORITY_REVIEWER) {
+          form.status = FormStatus.PENDING_REVIEW_BY_AUTHORITY_REVIEWER;
+        }
+      }
+    }
     
     // Actualizar el formulario
     form.lastUpdatedBy = user.sub;
@@ -149,6 +209,7 @@ export class CSEDurableObject {
     }
     
     // Actualizar el estado
+    const oldStatus = form.status;
     form.status = newStatus;
     form.lastUpdatedBy = user.sub;
     form.lastUpdatedAt = now;
@@ -162,6 +223,40 @@ export class CSEDurableObject {
     // Guardar cambios
     await this.state.storage.put('form', form);
     this.form = form;
+    
+    // Actualizar el índice global si el estado ha cambiado
+    if (oldStatus !== newStatus) {
+      try {
+        // Verificar si tenemos acceso al env
+        if (this.env && this.env.CSE_INDEX_DO) {
+          const formId = `${form.clientId}`;
+          const indexId = this.env.CSE_INDEX_DO.idFromName('global-index');
+          const indexStub = this.env.CSE_INDEX_DO.get(indexId);
+          
+          // Notificar al índice sobre el cambio de estado
+          await indexStub.fetch(new Request(INTERNAL_URLS.INDEX.UPDATE, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'X-User': JSON.stringify(user) // Pasar la información del usuario para autenticación
+            },
+            body: JSON.stringify({
+              formId,
+              formData: {
+                clientId: form.clientId,
+                status: form.status,
+                lastUpdatedAt: form.lastUpdatedAt,
+                createdBy: form.createdBy,
+                steps: form.steps // Incluir los pasos para extraer información adicional
+              }
+            })
+          }));
+        }
+      } catch (error) {
+        console.error('Error updating index:', error);
+        // No fallamos la operación principal si hay un error al actualizar el índice
+      }
+    }
     
     return form;
   }
@@ -212,9 +307,10 @@ export class CSEDurableObject {
           
           const stepId = stepIdStr;
           
-          const { data, status } = await request.json();
+          const requestData = await request.json() as { data: Record<string, any>, status?: StepStatus, needsCorrection?: boolean };
+          const { data, status, needsCorrection } = requestData;
           
-          const updatedForm = await this.updateStep(stepId, data, status, userData);
+          const updatedForm = await this.updateStep(stepId, data, status, userData, needsCorrection);
           return new Response(JSON.stringify(updatedForm), {
             headers: { 'Content-Type': 'application/json' },
           });
@@ -238,12 +334,24 @@ export class CSEDurableObject {
       } else if (url.pathname === `/${clientId}/internal-review/request-corrections`) {
         // POST /:clientId/internal-review/request-corrections - Solicitar correcciones internas
         if (request.method === 'POST') {
-          const { comments } = await request.json();
+          const { comments, stepsToCorrect } = await request.json() as { comments: any[], stepsToCorrect: StepId[] };
+          const form = await this.getForm();
+          
+          // Marcar los pasos que necesitan corrección
+          for (const stepId of stepsToCorrect) {
+            const step = form.steps[stepId] as FormStep;
+            if (step) {
+              step.needsCorrection = true;
+            }
+          }
           
           // Añadir comentarios a los pasos correspondientes
           for (const comment of comments) {
             await this.addComment(comment.stepId, comment.text, userData);
           }
+          
+          // Guardar los cambios en los pasos antes de cambiar el estado
+          await this.state.storage.put('form', form);
           
           const updatedForm = await this.updateFormStatus(FormStatus.CORRECTIONS_NEEDED_BY_INTERNAL_REVIEWER, userData);
           return new Response(JSON.stringify(updatedForm), {
@@ -261,12 +369,24 @@ export class CSEDurableObject {
       } else if (url.pathname === `/${clientId}/authority-review/request-corrections`) {
         // POST /:clientId/authority-review/request-corrections - Solicitar correcciones de autoridad
         if (request.method === 'POST') {
-          const { comments } = await request.json();
+          const { comments, stepsToCorrect } = await request.json() as { comments: any[], stepsToCorrect: StepId[] };
+          const form = await this.getForm();
+          
+          // Marcar los pasos que necesitan corrección
+          for (const stepId of stepsToCorrect) {
+            const step = form.steps[stepId] as FormStep;
+            if (step) {
+              step.needsCorrection = true;
+            }
+          }
           
           // Añadir comentarios a los pasos correspondientes
           for (const comment of comments) {
             await this.addComment(comment.stepId, comment.text, userData);
           }
+          
+          // Guardar los cambios en los pasos antes de cambiar el estado
+          await this.state.storage.put('form', form);
           
           const updatedForm = await this.updateFormStatus(FormStatus.CORRECTIONS_NEEDED_BY_AUTHORITY_REVIEWER, userData);
           return new Response(JSON.stringify(updatedForm), {
