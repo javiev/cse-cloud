@@ -1,73 +1,108 @@
-import { FormStatus } from '../types';
+import { FormStatus, JWTPayload } from '../types';
 import { INTERNAL_URLS } from '../constants/urls';
+import { BaseDurableObject } from './base-durable-object';
+import { StateManager } from './state-manager';
+import { Router } from './router';
 
 /**
  * Durable Object para mantener un índice global de formularios
  * Permite consultar formularios por estado sin necesidad de acceder a cada DO individual
  */
-export class CSEIndexDurableObject {
-  state: DurableObjectState;
-  env: any;
+export class CSEIndexDurableObject extends BaseDurableObject {
+  private indexManager: StateManager<Record<string, any>>;
+  private router: Router;
   
   constructor(state: DurableObjectState, env: any) {
-    this.state = state;
-    this.env = env;
+    super(state, env);
+    this.indexManager = new StateManager<Record<string, any>>(state, 'formIndex');
+    this.router = this.setupRouter();
+  }
+  
+  /**
+   * Configura el enrutador con las rutas disponibles
+   */
+  private setupRouter(): Router {
+    const router = new Router();
+    
+    // Ruta para actualizar el índice
+    router.register('POST', INTERNAL_URLS.INDEX.UPDATE, this.handleUpdateIndex.bind(this));
+    
+    // Ruta para obtener formularios por estado
+    router.register('GET', INTERNAL_URLS.INDEX.FORMS_BY_STATUS, this.handleGetFormsByStatus.bind(this));
+    
+    return router;
   }
   
   /**
    * Inicializa el índice si no existe
    */
-  async initialize() {
-    const index = await this.state.storage.get('formIndex');
-    if (!index) {
-      await this.state.storage.put('formIndex', {});
-    }
+  async initialize(): Promise<Record<string, any>> {
+    return await this.indexManager.initialize({});
   }
   
   /**
    * Actualiza la información de un formulario en el índice
    */
-  async updateIndex(formId: string, formData: any) {
-    await this.initialize();
+  async handleUpdateIndex(request: Request): Promise<Response> {
+    const user = this.getUserFromRequest(request);
+    const errorResponse = this.validateUser(user);
+    if (errorResponse) return errorResponse;
     
-    // Obtener el índice actual
-    const index = await this.state.storage.get<Record<string, any>>('formIndex') || {};
+    const data = await request.json() as { formId: string, formData: any };
+    await this.updateIndex(data.formId, data.formData);
     
-    // Actualizar la entrada para este formulario
-    index[formId] = {
-      clientId: formData.clientId,
-      status: formData.status,
-      lastUpdatedAt: formData.lastUpdatedAt,
-      createdBy: formData.createdBy,
-      title: formData.steps?.informacion?.data?.nombre || `Formulario ${formId}`
-    };
-    
-    // Guardar el índice actualizado
-    await this.state.storage.put('formIndex', index);
-    
-    return new Response('Index updated', { status: 200 });
+    return this.createResponse({ message: 'Index updated' });
   }
   
   /**
-   * Obtiene formularios filtrados por estado
+   * Implementación de la actualización del índice
    */
-  async getFormsByStatus(status: FormStatus) {
+  private async updateIndex(formId: string, formData: any): Promise<void> {
     await this.initialize();
     
-    // Obtener el índice
-    const index = await this.state.storage.get('formIndex') || {};
+    await this.indexManager.update(index => {
+      index[formId] = {
+        clientId: formData.clientId,
+        status: formData.status,
+        lastUpdatedAt: formData.lastUpdatedAt,
+        createdBy: formData.createdBy,
+        title: formData.steps?.informacion?.data?.nombre || `Formulario ${formId}`
+      };
+      return index;
+    });
+  }
+  
+  /**
+   * Maneja la solicitud para obtener formularios por estado
+   */
+  async handleGetFormsByStatus(request: Request): Promise<Response> {
+    const user = this.getUserFromRequest(request);
+    const errorResponse = this.validateUser(user);
+    if (errorResponse) return errorResponse;
     
-    // Filtrar por estado
-    const filteredForms = Object.entries(index)
+    const url = new URL(request.url);
+    const status = url.searchParams.get('status');
+    
+    if (!status) {
+      return this.createErrorResponse('Status parameter is required', 400);
+    }
+    
+    const forms = await this.getFormsByStatus(status as FormStatus);
+    return this.createResponse(forms);
+  }
+  
+  /**
+   * Implementación para obtener formularios filtrados por estado
+   */
+  private async getFormsByStatus(status: FormStatus): Promise<any[]> {
+    const index = await this.initialize();
+    
+    return Object.entries(index)
       .filter(([_, data]) => data.status === status)
       .map(([formId, data]) => ({
         formId,
         ...data
       }));
-    
-    return new Response(JSON.stringify(filteredForms), {
-      headers: { 'Content-Type': 'application/json' }
-    });
   }
   
   /**
@@ -76,28 +111,13 @@ export class CSEIndexDurableObject {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
     
-    // Verificar autenticación
-    const user = request.headers.get('X-User');
-    if (!user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+    // Buscar una ruta que coincida
+    const match = this.router.match(request.method, url.pathname);
+    
+    if (match) {
+      return match.handler.handler(request, match.params);
     }
     
-    // Endpoint para actualizar el índice
-    if (url.pathname === new URL(INTERNAL_URLS.INDEX.UPDATE).pathname && request.method === 'POST') {
-      const data = await request.json() as { formId: string, formData: any };
-      return this.updateIndex(data.formId, data.formData);
-    }
-    
-    // Endpoint para obtener formularios por estado
-    if (url.pathname === new URL(INTERNAL_URLS.INDEX.FORMS_BY_STATUS).pathname && request.method === 'GET') {
-      const status = url.searchParams.get('status');
-      if (!status) {
-        return new Response('Status parameter is required', { status: 400 });
-      }
-      
-      return this.getFormsByStatus(status as FormStatus);
-    }
-    
-    return new Response('Not found', { status: 404 });
+    return this.createErrorResponse('Not found', 404);
   }
 }
