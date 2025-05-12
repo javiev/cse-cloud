@@ -1,5 +1,5 @@
-import { CSEForm, FormStatus, JWTPayload, StepStatus } from '../types';
-import { StepId, createStep, initializeSteps, FORM_STEPS, FormStep } from '../types/form-steps';
+import { CSEForm, FormStatus, JWTPayload, StepStatus, UserRole, FormStep } from '../types';
+import { StepId, createStep, initializeSteps, FORM_STEPS } from '../types/form-steps';
 import { ERROR_MESSAGES } from '../constants';
 import { isValidStatusTransition } from '../auth/authorization';
 
@@ -67,6 +67,11 @@ export class CSEDurableObject {
 
   /**
    * Actualiza un paso del formulario
+   * @param stepId - ID del paso a actualizar
+   * @param data - Datos a actualizar en el paso
+   * @param status - Nuevo estado del paso (opcional)
+   * @param user - Información del usuario que realiza la actualización
+   * @returns Formulario actualizado
    */
   async updateStep(stepId: StepId, data: any, status: StepStatus | undefined, user: JWTPayload): Promise<CSEForm> {
     const form = await this.getForm();
@@ -75,6 +80,18 @@ export class CSEDurableObject {
     // Verificar si el paso existe
     if (!form.steps[stepId]) {
       throw new Error(`Paso ${stepId} no encontrado`);
+    }
+    
+    // Verificar si el usuario tiene permiso para editar este paso específico
+    if (
+      (form.status === FormStatus.CORRECTIONS_NEEDED_BY_INTERNAL_REVIEWER || 
+       form.status === FormStatus.CORRECTIONS_NEEDED_BY_AUTHORITY_REVIEWER) && 
+      user.role === UserRole.CREATOR
+    ) {
+      // Si estamos en modo de corrección, verificar si este paso específico necesita corrección
+      if (form.stepsNeedingCorrection && !form.stepsNeedingCorrection.includes(stepId)) {
+        throw new Error(`No tienes permiso para editar este paso. Solo puedes editar los pasos marcados para corrección.`);
+      }
     }
     
     // Actualizar paso existente
@@ -86,6 +103,20 @@ export class CSEDurableObject {
       lastUpdatedBy: user.sub,
       lastUpdatedAt: now,
     };
+    
+    // Si este paso estaba marcado para corrección y ahora se ha actualizado, quitarlo de la lista
+    if (form.stepsNeedingCorrection && form.stepsNeedingCorrection.includes(stepId)) {
+      form.stepsNeedingCorrection = form.stepsNeedingCorrection.filter(id => id !== stepId);
+      
+      // Si ya no hay pasos que necesiten corrección, podemos cambiar el estado del formulario
+      if (form.stepsNeedingCorrection.length === 0) {
+        if (form.status === FormStatus.CORRECTIONS_NEEDED_BY_INTERNAL_REVIEWER) {
+          form.status = FormStatus.PENDING_REVIEW_BY_INTERNAL_REVIEWER;
+        } else if (form.status === FormStatus.CORRECTIONS_NEEDED_BY_AUTHORITY_REVIEWER) {
+          form.status = FormStatus.PENDING_REVIEW_BY_AUTHORITY_REVIEWER;
+        }
+      }
+    }
     
     // Actualizar el formulario
     form.lastUpdatedBy = user.sub;

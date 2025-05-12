@@ -9,11 +9,22 @@ export interface CloudflareBindings {
 }
 
 export interface JWTPayload {
-  sub: string;
-  role: UserRole;
-  clientId: string;
+  // Campos originales del token
+  id: string;
+  username: string;
+  email: string;
+  client_id: string;
+  rol: string;
   exp: number;
-  iat: number;
+  password?: string;
+  _partial?: boolean;
+  _saved_in_db?: boolean;
+  _custom_generated_pk?: boolean;
+  
+  // Campos transformados para compatibilidad
+  sub: string;       // Mapeado desde id
+  role: UserRole;    // Mapeado desde rol
+  clientId: string;  // Mapeado desde client_id
 }
 
 export enum UserRole {
@@ -58,12 +69,13 @@ export interface StepComment {
 }
 
 // Importamos los tipos específicos para los pasos
-import { AnyTypedFormStep, StepId } from './form-steps';
+import { StepId } from './form-steps';
 
 export interface CSEForm {
   clientId: string;
   status: FormStatus;
-  steps: Record<StepId, AnyTypedFormStep>;
+  steps: Record<StepId, FormStep>;
+  stepsNeedingCorrection?: StepId[]; // Pasos específicos que necesitan corrección
   createdBy: string;
   createdAt: string;
   lastUpdatedBy: string;

@@ -3,12 +3,47 @@ import { FormStatus, StepStatus, UserRole } from '../types';
 
 // Esquema para validar el JWT payload
 export const jwtPayloadSchema = z.object({
-  sub: z.string(),
-  role: z.nativeEnum(UserRole),
-  clientId: z.string(),
+  // Campos del token real
+  id: z.string(),
+  username: z.string(),
+  email: z.string().email(),
+  client_id: z.string(),
+  rol: z.string(),
   exp: z.number(),
-  iat: z.number(),
-});
+  // Campos opcionales
+  password: z.string().optional(),
+  _partial: z.boolean().optional(),
+  _saved_in_db: z.boolean().optional(),
+  _custom_generated_pk: z.boolean().optional(),
+}).transform(data => ({
+  ...data,
+  // Transformar a la estructura esperada por el código existente
+  sub: data.id,
+  role: mapRolToUserRole(data.rol),
+  clientId: data.client_id
+}));
+
+// Constantes para los roles de clientes
+export const CLIENT_ROLES = {
+  MINERA_1: 'minera_1',
+  MINERA_3: 'minera_3',
+  AUTORIDAD_2: 'autoridad_2'
+} as const;
+
+// Función para mapear el rol del token al enum UserRole
+function mapRolToUserRole(rol: string): UserRole {
+  // Mapeo de roles según la documentación
+  switch (rol) {
+    case CLIENT_ROLES.MINERA_1:
+      return UserRole.CREATOR;
+    case CLIENT_ROLES.MINERA_3:
+      return UserRole.INTERNAL_REVIEWER;
+    case CLIENT_ROLES.AUTORIDAD_2:
+      return UserRole.AUTHORITY_REVIEWER;
+    default:
+      return UserRole.CREATOR; // Valor por defecto
+  }
+}
 
 // Esquema para validar un comentario de paso
 export const stepCommentSchema = z.object({
