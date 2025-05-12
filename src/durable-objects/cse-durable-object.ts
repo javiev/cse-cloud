@@ -1,6 +1,7 @@
 import { CSEForm, FormStatus, JWTPayload, StepStatus, UserRole, FormStep } from '../types';
 import { StepId, createStep, initializeSteps, FORM_STEPS } from '../types/form-steps';
 import { ERROR_MESSAGES } from '../constants';
+import { INTERNAL_URLS } from '../constants/urls';
 import { isValidStatusTransition } from '../auth/authorization';
 
 /**
@@ -10,9 +11,11 @@ import { isValidStatusTransition } from '../auth/authorization';
 export class CSEDurableObject {
   state: DurableObjectState;
   form: CSEForm | null = null;
+  env: any; // Para acceder a otros DOs y servicios
 
-  constructor(state: DurableObjectState) {
+  constructor(state: DurableObjectState, env: any) {
     this.state = state;
+    this.env = env;
   }
 
   /**
@@ -206,6 +209,7 @@ export class CSEDurableObject {
     }
     
     // Actualizar el estado
+    const oldStatus = form.status;
     form.status = newStatus;
     form.lastUpdatedBy = user.sub;
     form.lastUpdatedAt = now;
@@ -219,6 +223,40 @@ export class CSEDurableObject {
     // Guardar cambios
     await this.state.storage.put('form', form);
     this.form = form;
+    
+    // Actualizar el índice global si el estado ha cambiado
+    if (oldStatus !== newStatus) {
+      try {
+        // Verificar si tenemos acceso al env
+        if (this.env && this.env.CSE_INDEX_DO) {
+          const formId = `${form.clientId}`;
+          const indexId = this.env.CSE_INDEX_DO.idFromName('global-index');
+          const indexStub = this.env.CSE_INDEX_DO.get(indexId);
+          
+          // Notificar al índice sobre el cambio de estado
+          await indexStub.fetch(new Request(INTERNAL_URLS.INDEX.UPDATE, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'X-User': JSON.stringify(user) // Pasar la información del usuario para autenticación
+            },
+            body: JSON.stringify({
+              formId,
+              formData: {
+                clientId: form.clientId,
+                status: form.status,
+                lastUpdatedAt: form.lastUpdatedAt,
+                createdBy: form.createdBy,
+                steps: form.steps // Incluir los pasos para extraer información adicional
+              }
+            })
+          }));
+        }
+      } catch (error) {
+        console.error('Error updating index:', error);
+        // No fallamos la operación principal si hay un error al actualizar el índice
+      }
+    }
     
     return form;
   }

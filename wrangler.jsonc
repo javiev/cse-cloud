@@ -19,7 +19,9 @@
       "vars": {
         "ENVIRONMENT": "dev",
         "SENTRY_DSN": "https://dev-sentry-dsn.ingest.sentry.io/123456",
-        "SESSION_SECRET": "dev-session-secret-change-in-production"
+        "SESSION_SECRET": "dev-session-secret-change-in-production",
+        "INTERNAL_INDEX_BASE_URL": "https://internal/index",
+        "INTERNAL_FORM_BASE_URL": "https://internal/form"
       },
       "durable_objects": {
         "bindings": [
@@ -40,7 +42,9 @@
       "vars": {
         "ENVIRONMENT": "lab",
         "SENTRY_DSN": "https://lab-sentry-dsn.ingest.sentry.io/123456",
-        "SESSION_SECRET": "lab-session-secret-change-in-production"
+        "SESSION_SECRET": "lab-session-secret-change-in-production",
+        "INTERNAL_INDEX_BASE_URL": "https://internal/index",
+        "INTERNAL_FORM_BASE_URL": "https://internal/form"
       },
       "durable_objects": {
         "bindings": [
@@ -61,7 +65,9 @@
       "vars": {
         "ENVIRONMENT": "prod",
         "SENTRY_DSN": "https://prod-sentry-dsn.ingest.sentry.io/123456",
-        "SESSION_SECRET": "prod-session-secret-change-in-production"
+        "SESSION_SECRET": "prod-session-secret-change-in-production",
+        "INTERNAL_INDEX_BASE_URL": "https://internal/index",
+        "INTERNAL_FORM_BASE_URL": "https://internal/form"
       },
       "durable_objects": {
         "bindings": [
