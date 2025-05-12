@@ -1,0 +1,86 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cse-cloud",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-04-28",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "CSEDurableObject"
+      ]
+    }
+  ],
+  "env": {
+    "dev": {
+      "vars": {
+        "ENVIRONMENT": "dev",
+        "SENTRY_DSN": "https://dev-sentry-dsn.ingest.sentry.io/123456",
+        "SESSION_SECRET": "dev-session-secret-change-in-production"
+      },
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "CSE_DO",
+            "class_name": "CSEDurableObject"
+          }
+        ]
+      },
+      "r2_buckets": [
+        {
+          "binding": "CSE_FILES",
+          "bucket_name": "cse-files-dev"
+        }
+      ]
+    },
+    "lab": {
+      "vars": {
+        "ENVIRONMENT": "lab",
+        "SENTRY_DSN": "https://lab-sentry-dsn.ingest.sentry.io/123456",
+        "SESSION_SECRET": "lab-session-secret-change-in-production"
+      },
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "CSE_DO",
+            "class_name": "CSEDurableObject"
+          }
+        ]
+      },
+      "r2_buckets": [
+        {
+          "binding": "CSE_FILES",
+          "bucket_name": "cse-files-lab"
+        }
+      ]
+    },
+    "prod": {
+      "vars": {
+        "ENVIRONMENT": "prod",
+        "SENTRY_DSN": "https://prod-sentry-dsn.ingest.sentry.io/123456",
+        "SESSION_SECRET": "prod-session-secret-change-in-production"
+      },
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "CSE_DO",
+            "class_name": "CSEDurableObject"
+          }
+        ]
+      },
+      "r2_buckets": [
+        {
+          "binding": "CSE_FILES",
+          "bucket_name": "cse-files-prod"
+        }
+      ]
+    }
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  }
+}

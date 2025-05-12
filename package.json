@@ -1,0 +1,29 @@
+{
+  "name": "cse-cloud",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy --minify",
+    "deploy:dev": "wrangler deploy --env dev",
+    "deploy:lab": "wrangler deploy --env lab",
+    "deploy:prod": "wrangler deploy --env prod",
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "lint": "eslint --ext .ts,.tsx src",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\""
+  },
+  "dependencies": {
+    "hono": "^4.7.8",
+    "jose": "^5.2.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240419.0",
+    "@types/node": "^20.11.5",
+    "@typescript-eslint/eslint-plugin": "^6.19.1",
+    "@typescript-eslint/parser": "^6.19.1",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.2.4",
+    "typescript": "^5.3.3",
+    "wrangler": "^4.4.0"
+  }
+}
