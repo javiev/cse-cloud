@@ -89,23 +89,40 @@ Cada formulario CSE es una entidad aislada por `clientId`, permitiendo:
 
 ### Durable Objects
 
+#### CSEDurableObject
 * DO por cliente: `cse-${clientId}`
 * Guarda:
   * Estado del formulario
   * Todos los pasos
   * Comentarios por paso
+  * Historial de cambios de estado
+
+#### CSEIndexDurableObject
+* DO global: `global-index`
+* Mantiene un índice centralizado de todos los formularios
+* Permite consultas eficientes por estado a nivel global
+* Facilita la visualización de formularios pendientes para autoridades
 
 ### Rutas REST (via Hono)
 
-| Método | Ruta                                                  | Función                              |
-| ------ | ----------------------------------------------------- | ------------------------------------ |
-| GET    | `/cse/:clientId`                                      | Obtiene todo el estado del CSE       |
-| POST   | `/cse/:clientId/steps/:stepId`                        | Guarda/actualiza un paso             |
-| POST   | `/cse/:clientId/submit`                               | Enviar formulario a revisión interna |
-| POST   | `/cse/:clientId/internal-review/approve`              | Aprueba internamente                 |
-| POST   | `/cse/:clientId/internal-review/request-corrections`  | Solicita correcciones internas       |
-| POST   | `/cse/:clientId/authority-review/approve`             | Aprueba final                        |
-| POST   | `/cse/:clientId/authority-review/request-corrections` | Solicita correcciones autoridad      |
+#### Rutas para Clientes (acceso por clientId)
+
+| Método | Ruta                                                  | Función                              | Roles con acceso |
+| ------ | ----------------------------------------------------- | ------------------------------------ | ---------------- |
+| GET    | `/cse/:clientId`                                      | Obtiene todo el estado del CSE       | Todos (con permisos) |
+| POST   | `/cse/:clientId/steps/:stepId`                        | Guarda/actualiza un paso             | creator |
+| POST   | `/cse/:clientId/submit`                               | Enviar formulario a revisión interna | creator |
+| POST   | `/cse/:clientId/internal-review/approve`              | Aprueba internamente                 | internal_reviewer |
+| POST   | `/cse/:clientId/internal-review/request-corrections`  | Solicita correcciones internas       | internal_reviewer |
+| POST   | `/cse/:clientId/authority-review/approve`             | Aprueba final                        | authority_reviewer |
+| POST   | `/cse/:clientId/authority-review/request-corrections` | Solicita correcciones autoridad      | authority_reviewer |
+
+#### Rutas para Autoridad (acceso global)
+
+| Método | Ruta                                | Función                                      | Roles con acceso |
+| ------ | ----------------------------------- | -------------------------------------------- | ---------------- |
+| GET    | `/api/authority/pending-forms`      | Lista todos los formularios pendientes de revisión | authority_reviewer |
+| GET    | `/api/authority/forms/:clientId`    | Obtiene los detalles de un formulario específico | authority_reviewer |
 
 ## 📦 Despacho Final
 
@@ -150,8 +167,20 @@ Editar el archivo `wrangler.jsonc` para configurar los secretos y variables de e
 
 ```json
 "vars": {
-  "SESSION_SECRET": "tu-secreto-seguro-para-jwt"
+  "ENVIRONMENT": "dev",
+  "SESSION_SECRET": "tu-secreto-seguro-para-jwt",
+  "SENTRY_DSN": "https://tu-dsn.ingest.sentry.io/proyecto",
+  "INTERNAL_INDEX_BASE_URL": "https://internal/index",
+  "INTERNAL_FORM_BASE_URL": "https://internal/form"
 }
+```
+
+También puedes crear un archivo `.env` en la raíz del proyecto para desarrollo local (este archivo no se sube al repositorio):
+
+```
+# URLs internas para comunicación entre Durable Objects
+INTERNAL_INDEX_BASE_URL=https://internal/index
+INTERNAL_FORM_BASE_URL=https://internal/form
 ```
 
 3. **Desarrollo local**:
