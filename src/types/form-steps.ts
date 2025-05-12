@@ -227,6 +227,7 @@ export interface FormStep {
   status: StepStatus;
   data: StepData; // Ahora usamos el tipo StepData derivado de los esquemas Zod
   comments: StepComment[];
+  needsCorrection: boolean; // Indica si el paso necesita corrección
   lastUpdatedBy: string;
   lastUpdatedAt: string;
 }
@@ -253,6 +254,7 @@ export function createStep(
     status: StepStatus.INCOMPLETE,
     data: STEP_SCHEMAS[id].parse(partialData),
     comments: [],
+    needsCorrection: false, // Por defecto, un paso nuevo no necesita corrección
     lastUpdatedBy: user,
     lastUpdatedAt: now
   };

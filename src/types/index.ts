@@ -44,8 +44,9 @@ export enum FormStatus {
 
 export enum StepStatus {
   INCOMPLETE = 'incomplete',
+  IN_PROGRESS = 'in-progress',
   COMPLETED = 'completed',
-  NEEDS_CORRECTION = 'needs_correction',
+  REJECTED = 'rejected',
 }
 
 export interface FormStep {
@@ -55,6 +56,7 @@ export interface FormStep {
   status: StepStatus;
   data: Record<string, any>;
   comments: StepComment[];
+  needsCorrection: boolean; // Indica si el paso necesita corrección
   lastUpdatedBy: string;
   lastUpdatedAt: string;
 }
@@ -75,7 +77,6 @@ export interface CSEForm {
   clientId: string;
   status: FormStatus;
   steps: Record<StepId, FormStep>;
-  stepsNeedingCorrection?: StepId[]; // Pasos específicos que necesitan corrección
   createdBy: string;
   createdAt: string;
   lastUpdatedBy: string;

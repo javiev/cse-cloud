@@ -55,11 +55,13 @@ export class CSEDurableObject {
    */
   async getForm(): Promise<CSEForm> {
     if (!this.form) {
-      this.form = await this.state.storage.get<CSEForm>('form');
+      const storedForm = await this.state.storage.get<CSEForm>('form');
       
-      if (!this.form) {
+      if (!storedForm) {
         throw new Error(ERROR_MESSAGES.FORM_NOT_FOUND);
       }
+      
+      this.form = storedForm;
     }
     
     return this.form;
@@ -70,10 +72,17 @@ export class CSEDurableObject {
    * @param stepId - ID del paso a actualizar
    * @param data - Datos a actualizar en el paso
    * @param status - Nuevo estado del paso (opcional)
+   * @param needsCorrection - Indica si el paso necesita corrección (opcional)
    * @param user - Información del usuario que realiza la actualización
    * @returns Formulario actualizado
    */
-  async updateStep(stepId: StepId, data: any, status: StepStatus | undefined, user: JWTPayload): Promise<CSEForm> {
+  async updateStep(
+    stepId: StepId, 
+    data: any, 
+    status: StepStatus | undefined, 
+    user: JWTPayload, 
+    needsCorrection?: boolean
+  ): Promise<CSEForm> {
     const form = await this.getForm();
     const now = new Date().toISOString();
     
@@ -82,16 +91,29 @@ export class CSEDurableObject {
       throw new Error(`Paso ${stepId} no encontrado`);
     }
     
-    // Verificar si el usuario tiene permiso para editar este paso específico
-    if (
-      (form.status === FormStatus.CORRECTIONS_NEEDED_BY_INTERNAL_REVIEWER || 
-       form.status === FormStatus.CORRECTIONS_NEEDED_BY_AUTHORITY_REVIEWER) && 
-      user.role === UserRole.CREATOR
-    ) {
-      // Si estamos en modo de corrección, verificar si este paso específico necesita corrección
-      if (form.stepsNeedingCorrection && !form.stepsNeedingCorrection.includes(stepId)) {
-        throw new Error(`No tienes permiso para editar este paso. Solo puedes editar los pasos marcados para corrección.`);
+    // Lógica para diferentes roles
+    if (user.role === UserRole.CREATOR) {
+      // Si el creador está corrigiendo, verificar que el paso esté marcado para corrección
+      if (
+        (form.status === FormStatus.CORRECTIONS_NEEDED_BY_INTERNAL_REVIEWER || 
+         form.status === FormStatus.CORRECTIONS_NEEDED_BY_AUTHORITY_REVIEWER)
+      ) {
+        const step = form.steps[stepId] as FormStep;
+        if (!step.needsCorrection) {
+          throw new Error(`No tienes permiso para editar este paso. Solo puedes editar los pasos marcados para corrección.`);
+        }
+        // Al corregir un paso, se marca como que ya no necesita corrección
+        needsCorrection = false;
       }
+    } else if (
+      (user.role === UserRole.INTERNAL_REVIEWER && form.status === FormStatus.PENDING_REVIEW_BY_INTERNAL_REVIEWER) ||
+      (user.role === UserRole.AUTHORITY_REVIEWER && form.status === FormStatus.PENDING_REVIEW_BY_AUTHORITY_REVIEWER)
+    ) {
+      // Los revisores pueden marcar pasos para corrección durante su revisión
+      // No modifican los datos, solo el estado y si necesita corrección
+      data = {}; // Los revisores no modifican los datos del paso
+    } else {
+      throw new Error(`No tienes permiso para modificar este paso en el estado actual del formulario.`);
     }
     
     // Actualizar paso existente
@@ -100,16 +122,20 @@ export class CSEDurableObject {
       ...currentStep,
       data: { ...currentStep.data, ...data },
       status: status || currentStep.status,
+      needsCorrection: needsCorrection !== undefined ? needsCorrection : currentStep.needsCorrection,
       lastUpdatedBy: user.sub,
       lastUpdatedAt: now,
     };
     
-    // Si este paso estaba marcado para corrección y ahora se ha actualizado, quitarlo de la lista
-    if (form.stepsNeedingCorrection && form.stepsNeedingCorrection.includes(stepId)) {
-      form.stepsNeedingCorrection = form.stepsNeedingCorrection.filter(id => id !== stepId);
+    // Si es un revisor marcando un paso para corrección, no cambiamos el estado del formulario aún
+    // Solo cuando se envía explícitamente la solicitud de correcciones se cambia el estado
+    
+    // Si es el creador corrigiendo, verificamos si todos los pasos han sido corregidos
+    if (user.role === UserRole.CREATOR && needsCorrection === false) {
+      const allCorrectionsDone = Object.values(form.steps).every(step => !(step as FormStep).needsCorrection);
       
       // Si ya no hay pasos que necesiten corrección, podemos cambiar el estado del formulario
-      if (form.stepsNeedingCorrection.length === 0) {
+      if (allCorrectionsDone) {
         if (form.status === FormStatus.CORRECTIONS_NEEDED_BY_INTERNAL_REVIEWER) {
           form.status = FormStatus.PENDING_REVIEW_BY_INTERNAL_REVIEWER;
         } else if (form.status === FormStatus.CORRECTIONS_NEEDED_BY_AUTHORITY_REVIEWER) {
@@ -243,9 +269,10 @@ export class CSEDurableObject {
           
           const stepId = stepIdStr;
           
-          const { data, status } = await request.json();
+          const requestData = await request.json() as { data: Record<string, any>, status?: StepStatus, needsCorrection?: boolean };
+          const { data, status, needsCorrection } = requestData;
           
-          const updatedForm = await this.updateStep(stepId, data, status, userData);
+          const updatedForm = await this.updateStep(stepId, data, status, userData, needsCorrection);
           return new Response(JSON.stringify(updatedForm), {
             headers: { 'Content-Type': 'application/json' },
           });
@@ -269,12 +296,24 @@ export class CSEDurableObject {
       } else if (url.pathname === `/${clientId}/internal-review/request-corrections`) {
         // POST /:clientId/internal-review/request-corrections - Solicitar correcciones internas
         if (request.method === 'POST') {
-          const { comments } = await request.json();
+          const { comments, stepsToCorrect } = await request.json() as { comments: any[], stepsToCorrect: StepId[] };
+          const form = await this.getForm();
+          
+          // Marcar los pasos que necesitan corrección
+          for (const stepId of stepsToCorrect) {
+            const step = form.steps[stepId] as FormStep;
+            if (step) {
+              step.needsCorrection = true;
+            }
+          }
           
           // Añadir comentarios a los pasos correspondientes
           for (const comment of comments) {
             await this.addComment(comment.stepId, comment.text, userData);
           }
+          
+          // Guardar los cambios en los pasos antes de cambiar el estado
+          await this.state.storage.put('form', form);
           
           const updatedForm = await this.updateFormStatus(FormStatus.CORRECTIONS_NEEDED_BY_INTERNAL_REVIEWER, userData);
           return new Response(JSON.stringify(updatedForm), {
@@ -292,12 +331,24 @@ export class CSEDurableObject {
       } else if (url.pathname === `/${clientId}/authority-review/request-corrections`) {
         // POST /:clientId/authority-review/request-corrections - Solicitar correcciones de autoridad
         if (request.method === 'POST') {
-          const { comments } = await request.json();
+          const { comments, stepsToCorrect } = await request.json() as { comments: any[], stepsToCorrect: StepId[] };
+          const form = await this.getForm();
+          
+          // Marcar los pasos que necesitan corrección
+          for (const stepId of stepsToCorrect) {
+            const step = form.steps[stepId] as FormStep;
+            if (step) {
+              step.needsCorrection = true;
+            }
+          }
           
           // Añadir comentarios a los pasos correspondientes
           for (const comment of comments) {
             await this.addComment(comment.stepId, comment.text, userData);
           }
+          
+          // Guardar los cambios en los pasos antes de cambiar el estado
+          await this.state.storage.put('form', form);
           
           const updatedForm = await this.updateFormStatus(FormStatus.CORRECTIONS_NEEDED_BY_AUTHORITY_REVIEWER, userData);
           return new Response(JSON.stringify(updatedForm), {
