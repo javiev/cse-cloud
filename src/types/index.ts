@@ -4,7 +4,6 @@ export interface CloudflareBindings {
   CLIENT_DISPATCH_QUEUE?: Queue;
   AUTHORITY_DISPATCH_QUEUE?: Queue;
   ENVIRONMENT: string;
-  SENTRY_DSN: string;
   SESSION_SECRET: string;
 }
 
