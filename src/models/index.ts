@@ -49,7 +49,7 @@ function mapRolToUserRole(rol: string): UserRole {
 export const stepCommentSchema = z.object({
   id: z.string().optional(),
   stepId: z.string(),
-  text: z.string().min(1, 'El comentario no puede estar vacío'),
+  comment: z.string().min(1, 'El comentario no puede estar vacío'),
   createdBy: z.string().optional(),
   createdAt: z.string().optional(),
   role: z.nativeEnum(UserRole).optional(),
@@ -90,7 +90,7 @@ export const updateStepSchema = z.object({
 export const requestCorrectionsSchema = z.object({
   comments: z.array(z.object({
     stepId: z.string(),
-    text: z.string().min(1, 'El comentario no puede estar vacío'),
+    comment: z.string().min(1, 'El comentario no puede estar vacío'),
   })),
 });
 
@@ -98,6 +98,6 @@ export const requestCorrectionsSchema = z.object({
 export const approveSchema = z.object({
   comments: z.array(z.object({
     stepId: z.string(),
-    text: z.string(),
+    comment: z.string(),
   })).optional(),
 });

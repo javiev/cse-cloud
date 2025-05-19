@@ -283,7 +283,7 @@ export class CSEDurableObject extends BaseDurableObject {
           if (form.status === FormStatus.CORRECTIONS_NEEDED_BY_INTERNAL_REVIEWER) {
             form.status = FormStatus.PENDING_REVIEW_BY_INTERNAL_REVIEWER;
           } else if (form.status === FormStatus.CORRECTIONS_NEEDED_BY_AUTHORITY_REVIEWER) {
-            form.status = FormStatus.PENDING_REVIEW_BY_AUTHORITY_REVIEWER;
+            form.status = FormStatus.PENDING_REVIEW_BY_INTERNAL_REVIEWER;
           }
         }
       }

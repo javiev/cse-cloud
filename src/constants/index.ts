@@ -12,6 +12,16 @@ import { FormStatus, StepStatus, UserRole } from '../types';
  * | corrections_needed_by_authority  | Corregir pasos   | Lectura            | Lectura             |
  * | approved                         | Lectura          | Lectura            | Lectura             |
  */
+/**
+ * FLUJO DE CORRECCIONES DE AUTORIDAD (actualizado):
+ * 1. Autoridad solicita correcciones → corrections_needed_by_authority_reviewer
+ * 2. Minera_1 (creator) corrige los pasos
+ * 3. El formulario pasa a pending_review_by_internal_reviewer (revisión interna)
+ * 4. Minera_3 revisa y aprueba o pide más correcciones internas
+ * 5. Si aprueba, pasa a pending_review_by_authority_reviewer
+ * 6. Autoridad revisa nuevamente
+ * 7. El ciclo se repite hasta la aprobación final
+ */
 export const ROLE_PERMISSIONS = {
   [UserRole.CREATOR]: {
     canCreate: true,

@@ -2,6 +2,61 @@
 
 ## 📋 Resumen Técnico
 
+---
+
+## 🔄 Flujo de revisión y correcciones (actualizado)
+
+El flujo de revisión de formularios en CSE Cloud es el siguiente:
+
+1. **Creación:**
+   - El usuario `minera_1` (creator) crea y completa el formulario.
+2. **Revisión interna:**
+   - El usuario `minera_3` (internal_reviewer) revisa el formulario.
+   - Puede aprobarlo para pasar a la autoridad o solicitar correcciones.
+3. **Correcciones internas:**
+   - Si `minera_3` solicita correcciones, el formulario pasa a `corrections_needed_by_internal_reviewer`.
+   - Solo `minera_1` puede editar y corregir.
+   - Al reenviar, vuelve a revisión interna.
+4. **Revisión por autoridad:**
+   - Si la revisión interna es aprobada, el formulario pasa a `pending_review_by_authority_reviewer`.
+   - El usuario `autoridad_2` (authority_reviewer) revisa.
+   - Puede aprobar definitivamente o solicitar correcciones.
+5. **Correcciones solicitadas por autoridad:**
+   - Si la autoridad solicita correcciones, el formulario pasa a `corrections_needed_by_authority_reviewer`.
+   - Solo `minera_1` puede editar y corregir.
+   - Al reenviar, el formulario **debe volver primero a revisión interna** (`pending_review_by_internal_reviewer`).
+   - `minera_3` revisa nuevamente. Si aprueba, recién ahí vuelve a la autoridad.
+   - El ciclo se repite hasta la aprobación final.
+
+### Diagrama de estados simplificado
+
+```mermaid
+stateDiagram-v2
+    [*] --> draft
+    draft --> pending_review_by_internal_reviewer
+    pending_review_by_internal_reviewer --> corrections_needed_by_internal_reviewer: Solicita correcciones interna
+    corrections_needed_by_internal_reviewer --> pending_review_by_internal_reviewer: Minera_1 corrige
+    pending_review_by_internal_reviewer --> pending_review_by_authority_reviewer: Aprueba interna
+    pending_review_by_authority_reviewer --> corrections_needed_by_authority_reviewer: Solicita correcciones autoridad
+    corrections_needed_by_authority_reviewer --> pending_review_by_internal_reviewer: Minera_1 corrige
+    pending_review_by_authority_reviewer --> approved: Aprueba autoridad
+    approved --> [*]
+```
+
+### Matriz de roles y permisos por estado
+
+| Estado del Formulario                   | creator (minera_1) | internal_reviewer (minera_3) | authority_reviewer (autoridad_2) |
+|-----------------------------------------|--------------------|------------------------------|-----------------------------------|
+| draft                                  | Editar             | No acceso                    | No acceso                         |
+| pending_review_by_internal_reviewer     | Lectura            | Revisión completa            | No acceso                         |
+| corrections_needed_by_internal_reviewer | Corregir pasos     | Lectura                      | No acceso                         |
+| pending_review_by_authority_reviewer    | Lectura            | Lectura                      | Revisión completa                 |
+| corrections_needed_by_authority_reviewer| Corregir pasos     | Lectura                      | Lectura                           |
+| approved                               | Lectura            | Lectura                      | Lectura                           |
+
+---
+
+
 CSE Cloud es un backend para gestión de formularios multi-tenant desarrollado sobre Cloudflare Workers. Está diseñado para manejar formularios de configuración específica para sitios mineros, con un flujo de trabajo que incluye creación, revisión interna y aprobación por autoridades.
 
 ### Características Principales

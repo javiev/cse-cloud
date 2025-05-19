@@ -1,0 +1,70 @@
+# wrangler.toml
+# Configuración multipambiente para Durable Objects, Buckets (R2) y futuras Queues
+
+name = "cse-cloud"
+main = "src/index.ts"
+compatibility_date = "2024-05-19"
+
+# Configuración por defecto (puede ser usada para desarrollo local)
+[vars]
+ENVIRONMENT = "dev"
+
+[[durable_objects.bindings]]
+name = "CSE_DO"
+class_name = "CSEDurableObject"
+
+[[durable_objects.bindings]]
+name = "CSE_INDEX_DO"
+class_name = "CSEIndexDurableObject"
+
+[[r2_buckets]]
+binding = "CSE_BUCKET"
+bucket_name = "cse-cloud-dev"
+
+# [queues.producers] y [queues.consumers] pueden agregarse cuando se use Cloudflare Queues
+
+# ===============================
+# Ambiente de laboratorio (lab)
+[env.lab]
+vars = { ENVIRONMENT = "lab" }
+
+[[env.lab.durable_objects.bindings]]
+name = "CSE_DO"
+class_name = "CSEDurableObject"
+
+[[env.lab.durable_objects.bindings]]
+name = "CSE_INDEX_DO"
+class_name = "CSEIndexDurableObject"
+
+[[env.lab.r2_buckets]]
+binding = "CSE_BUCKET"
+bucket_name = "cse-cloud-lab"
+
+# ===============================
+# Ambiente de producción (prod)
+[env.production]
+vars = { ENVIRONMENT = "prod" }
+
+[[env.production.durable_objects.bindings]]
+name = "CSE_DO"
+class_name = "CSEDurableObject"
+
+[[env.production.durable_objects.bindings]]
+name = "CSE_INDEX_DO"
+class_name = "CSEIndexDurableObject"
+
+[[env.production.r2_buckets]]
+binding = "CSE_BUCKET"
+bucket_name = "cse-cloud-prod"
+
+# ===============================
+# Ejemplo de futura integración con Queues
+# [env.lab.queues.producers]
+# binding = "FORM_QUEUE"
+# queue = "form-queue-lab"
+#
+# [env.production.queues.producers]
+# binding = "FORM_QUEUE"
+# queue = "form-queue-prod"
+
+# Puedes agregar más variables o bindings según crezcan los recursos.
