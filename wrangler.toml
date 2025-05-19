@@ -85,3 +85,10 @@ bucket_name = "cse-cloud-prod"
 # [env.production.queues.producers]
 # binding = "FORM_QUEUE"
 # queue = "form-queue-prod"
+
+# ===============================
+# Migraciones para Durable Objects
+[[migrations]]
+tag = "v2-reset"
+new_sqlite_classes  = [ "CSEDurableObject", "CSEIndexDurableObject" ]
+
