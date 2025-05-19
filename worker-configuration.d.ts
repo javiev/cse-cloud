@@ -5,7 +5,7 @@ declare namespace Cloudflare {
 	interface Env {
 		SESSION_SECRET: "dev-session-secret-change-in-production";
 		ENVIRONMENT: "dev" | "lab" | "prod";
-		SENTRY_DSN: "https://dev-sentry-dsn.ingest.sentry.io/123456" | "https://lab-sentry-dsn.ingest.sentry.io/123456" | "https://prod-sentry-dsn.ingest.sentry.io/123456";
+		
 		CSE_DO: DurableObjectNamespace /* CSEDurableObject */;
 		CSE_FILES: R2Bucket;
 		CLIENT_DISPATCH_QUEUE: Queue;

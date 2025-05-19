@@ -169,7 +169,7 @@ Editar el archivo `wrangler.jsonc` para configurar los secretos y variables de e
 "vars": {
   "ENVIRONMENT": "dev",
   "SESSION_SECRET": "tu-secreto-seguro-para-jwt",
-  "SENTRY_DSN": "https://tu-dsn.ingest.sentry.io/proyecto",
+
   "INTERNAL_INDEX_BASE_URL": "https://internal/index",
   "INTERNAL_FORM_BASE_URL": "https://internal/form"
 }
