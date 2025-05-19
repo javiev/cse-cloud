@@ -5,9 +5,6 @@
     "version": "1.0.0",
     "description": "API para la gestión de formularios y flujos de revisión CSE Cloud."
   },
-  "servers": [
-    { "url": "/" }
-  ],
   "paths": {
     "/cse/{clientId}": {
       "get": {

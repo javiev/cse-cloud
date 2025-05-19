@@ -56,7 +56,7 @@ app.get('/api/authority/pending-forms', listPendingAuthorityReviews);
 app.get('/api/authority/forms/:clientId', getFormDetails);
 
 // ──────────────── DOCUMENTACIÓN SWAGGER ────────────────
-app.get('/docs/openapi.json', (c: Context<{ Bindings: CloudflareBindings }>) => c.json(openapi));
+//app.get('/docs/openapi.json', (c: Context<{ Bindings: CloudflareBindings }>) => c.json(openapi));
 app.get('/docs', swaggerUI({ url: '/docs/openapi.json' }));
 
 // ──────────────── EXPORTS ────────────────
