@@ -8,6 +8,9 @@ compatibility_date = "2024-05-19"
 # Configuración por defecto (puede ser usada para desarrollo local)
 [vars]
 ENVIRONMENT = "dev"
+SESSION_SECRET = "dev-session-secret-change-in-production"
+INTERNAL_INDEX_BASE_URL = "https://internal/index"
+INTERNAL_FORM_BASE_URL = "https://internal/form"
 
 [[durable_objects.bindings]]
 name = "CSE_DO"
@@ -26,7 +29,7 @@ bucket_name = "cse-cloud-dev"
 # ===============================
 # Ambiente de laboratorio (lab)
 [env.lab]
-vars = { ENVIRONMENT = "lab" }
+vars = { ENVIRONMENT = "lab", SESSION_SECRET = "lab-session-secret-change-in-production", INTERNAL_INDEX_BASE_URL = "https://internal/index", INTERNAL_FORM_BASE_URL = "https://internal/form" }
 
 [[env.lab.durable_objects.bindings]]
 name = "CSE_DO"
@@ -43,7 +46,7 @@ bucket_name = "cse-cloud-lab"
 # ===============================
 # Ambiente de producción (prod)
 [env.production]
-vars = { ENVIRONMENT = "prod" }
+vars = { ENVIRONMENT = "prod", SESSION_SECRET = "prod-session-secret-change-in-production", INTERNAL_INDEX_BASE_URL = "https://internal/index", INTERNAL_FORM_BASE_URL = "https://internal/form" }
 
 [[env.production.durable_objects.bindings]]
 name = "CSE_DO"
