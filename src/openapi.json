@@ -1,0 +1,151 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "CSE Cloud API",
+    "version": "1.0.0",
+    "description": "API para la gestión de formularios y flujos de revisión CSE Cloud."
+  },
+  "servers": [
+    { "url": "/" }
+  ],
+  "paths": {
+    "/cse/{clientId}": {
+      "get": {
+        "summary": "Obtener formulario completo",
+        "parameters": [
+          { "name": "clientId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Formulario obtenido" },
+          "401": { "description": "No autorizado" },
+          "404": { "description": "No encontrado" }
+        }
+      }
+    },
+    "/cse/{clientId}/steps/{stepId}": {
+      "post": {
+        "summary": "Actualizar un paso del formulario",
+        "parameters": [
+          { "name": "clientId", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "stepId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "type": "object" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Paso actualizado" },
+          "400": { "description": "Error en la petición" },
+          "401": { "description": "No autorizado" }
+        }
+      }
+    },
+    "/cse/{clientId}/submit": {
+      "post": {
+        "summary": "Enviar formulario a revisión interna",
+        "parameters": [
+          { "name": "clientId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Formulario enviado a revisión interna" },
+          "400": { "description": "Error en la petición" },
+          "401": { "description": "No autorizado" }
+        }
+      }
+    },
+    "/cse/{clientId}/internal-review/approve": {
+      "post": {
+        "summary": "Aprobar revisión interna",
+        "parameters": [
+          { "name": "clientId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Revisión interna aprobada" },
+          "400": { "description": "Error en la petición" },
+          "401": { "description": "No autorizado" }
+        }
+      }
+    },
+    "/cse/{clientId}/internal-review/request-corrections": {
+      "post": {
+        "summary": "Solicitar correcciones desde revisión interna",
+        "parameters": [
+          { "name": "clientId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "type": "object" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Correcciones solicitadas" },
+          "400": { "description": "Error en la petición" },
+          "401": { "description": "No autorizado" }
+        }
+      }
+    },
+    "/cse/{clientId}/authority-review/approve": {
+      "post": {
+        "summary": "Aprobar revisión de autoridad",
+        "parameters": [
+          { "name": "clientId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Revisión de autoridad aprobada" },
+          "400": { "description": "Error en la petición" },
+          "401": { "description": "No autorizado" }
+        }
+      }
+    },
+    "/cse/{clientId}/authority-review/request-corrections": {
+      "post": {
+        "summary": "Solicitar correcciones desde revisión de autoridad",
+        "parameters": [
+          { "name": "clientId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "type": "object" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Correcciones solicitadas" },
+          "400": { "description": "Error en la petición" },
+          "401": { "description": "No autorizado" }
+        }
+      }
+    },
+    "/api/authority/pending-forms": {
+      "get": {
+        "summary": "Listar formularios pendientes de revisión de autoridad",
+        "responses": {
+          "200": { "description": "Listado de formularios" },
+          "401": { "description": "No autorizado" }
+        }
+      }
+    },
+    "/api/authority/forms/{clientId}": {
+      "get": {
+        "summary": "Obtener detalles de formulario por autoridad",
+        "parameters": [
+          { "name": "clientId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Detalles del formulario" },
+          "401": { "description": "No autorizado" },
+          "404": { "description": "No encontrado" }
+        }
+      }
+    }
+  }
+}
