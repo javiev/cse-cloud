@@ -18,7 +18,7 @@
     "dev": {
       "vars": {
         "ENVIRONMENT": "dev",
-        "SENTRY_DSN": "https://dev-sentry-dsn.ingest.sentry.io/123456",
+        
         "SESSION_SECRET": "dev-session-secret-change-in-production",
         "INTERNAL_INDEX_BASE_URL": "https://internal/index",
         "INTERNAL_FORM_BASE_URL": "https://internal/form"
@@ -64,7 +64,7 @@
     "prod": {
       "vars": {
         "ENVIRONMENT": "prod",
-        "SENTRY_DSN": "https://prod-sentry-dsn.ingest.sentry.io/123456",
+        
         "SESSION_SECRET": "prod-session-secret-change-in-production",
         "INTERNAL_INDEX_BASE_URL": "https://internal/index",
         "INTERNAL_FORM_BASE_URL": "https://internal/form"
