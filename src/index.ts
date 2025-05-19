@@ -39,6 +39,7 @@ app.post('/cse/:clientId/authority-review/approve', clientIdMatchMiddleware, app
 app.post('/cse/:clientId/authority-review/request-corrections', clientIdMatchMiddleware, requestAuthorityCorrections);
 app.get('/api/authority/pending-forms', listPendingAuthorityReviews);
 app.get('/api/authority/forms/:clientId', getFormDetails);
+app.get('/docs/openapi.json', (c: Context<{ Bindings: CloudflareBindings }>) => c.json(openapi));
 app.get('/docs', swaggerUI({ url: '/docs/openapi.json' }));
 
 // ──────────────── RUTAS DE NEGOCIO ────────────────
@@ -53,6 +54,7 @@ app.post('/cse/:clientId/authority-review/request-corrections', clientIdMatchMid
 // Autoridad
 app.get('/api/authority/pending-forms', listPendingAuthorityReviews);
 app.get('/api/authority/forms/:clientId', getFormDetails);
+
 
 // ──────────────── EXPORTS ────────────────
 export { CSEDurableObject } from './durable-objects/cse-durable-object';

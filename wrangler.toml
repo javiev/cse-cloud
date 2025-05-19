@@ -89,6 +89,6 @@ bucket_name = "cse-cloud-prod"
 # ===============================
 # Migraciones para Durable Objects
 [[migrations]]
-tag = "v2-reset"
+tag = "v1"
 new_sqlite_classes  = [ "CSEDurableObject", "CSEIndexDurableObject" ]
 
