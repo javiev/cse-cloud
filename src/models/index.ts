@@ -39,8 +39,10 @@ const ROL_TO_USER_ROLE: Record<string, UserRole> = {
 
 // Función para mapear el rol del token al enum UserRole
 function mapRolToUserRole(rol: string): UserRole {
-  // Usar el mapeo o devolver un valor por defecto si no existe
-  return ROL_TO_USER_ROLE[rol] || UserRole.CREATOR;
+  if (!(rol in ROL_TO_USER_ROLE)) {
+    throw new Error(`Rol inválido: ${rol}`);
+  }
+  return ROL_TO_USER_ROLE[rol];
 }
 
 // Esquema para validar un comentario de paso
