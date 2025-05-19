@@ -41,9 +41,7 @@ export async function errorMiddleware(c: Context<{ Bindings: CloudflareBindings 
       }
       
       // Manejador por defecto para errores no especificados
-      // Enviar a Sentry u otro servicio de monitoreo si está configurado
       if (c.env.ENVIRONMENT !== 'dev') {
-        // Aquí se integraría con Sentry
         console.error('Error no manejado:', error);
       }
       
