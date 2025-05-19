@@ -24,6 +24,23 @@ class_name = "CSEIndexDurableObject"
 binding = "CSE_BUCKET"
 bucket_name = "cse-cloud-dev"
 
+# ===============================
+# Ambiente de desarrollo (dev)
+[env.dev]
+vars = { ENVIRONMENT = "dev", SESSION_SECRET = "dev-session-secret-change-in-production", INTERNAL_INDEX_BASE_URL = "https://internal/index", INTERNAL_FORM_BASE_URL = "https://internal/form" }
+
+[[env.dev.durable_objects.bindings]]
+name = "CSE_DO"
+class_name = "CSEDurableObject"
+
+[[env.dev.durable_objects.bindings]]
+name = "CSE_INDEX_DO"
+class_name = "CSEIndexDurableObject"
+
+[[env.dev.r2_buckets]]
+binding = "CSE_BUCKET"
+bucket_name = "cse-cloud-dev"
+
 
 # ===============================
 # Ambiente de laboratorio (lab)
