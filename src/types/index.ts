@@ -63,7 +63,7 @@ export interface FormStep {
 export interface StepComment {
   id: string;
   stepId: string;
-  text: string;
+  comment: string;
   createdBy: string;
   createdAt: string;
   role: UserRole;

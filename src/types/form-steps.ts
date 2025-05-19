@@ -40,7 +40,7 @@ export type StepId = typeof STEP_ID[keyof typeof STEP_ID];
 export interface StepComment {
   id: string;
   stepId: string;
-  text: string;
+  comment: string;
   createdBy: string;
   createdAt: string;
   role: UserRole;
