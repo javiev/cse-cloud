@@ -1,5 +1,5 @@
 import { Hono, Context } from 'hono';
-import { cors } from '@hono/cors';
+import { cors } from 'hono/cors';
 import { swaggerUI } from '@hono/swagger-ui';
 import openapi from './openapi.json';
 import { CloudflareBindings } from './types';
@@ -20,6 +20,15 @@ import {
 } from './handlers/authority';
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
+
+// Configuración de CORS
+app.use('*', cors({
+  origin: ['http://localhost:3000', 'http://localhost:8080'],
+  allowHeaders: ['Content-Type', 'Authorization'],
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  credentials: true,
+  maxAge: 600,
+}));
 
 app.use('*', errorMiddleware);
 app.get('/', (c: Context<{ Bindings: CloudflareBindings }>) => {
