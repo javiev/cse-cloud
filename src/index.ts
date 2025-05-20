@@ -1,4 +1,5 @@
 import { Hono, Context } from 'hono';
+import { cors } from '@hono/cors';
 import { swaggerUI } from '@hono/swagger-ui';
 import openapi from './openapi.json';
 import { CloudflareBindings } from './types';
@@ -19,6 +20,7 @@ import {
 } from './handlers/authority';
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
+
 app.use('*', errorMiddleware);
 app.get('/', (c: Context<{ Bindings: CloudflareBindings }>) => {
   return c.json({
@@ -43,12 +45,7 @@ app.get('/docs/openapi.json', (c: Context<{ Bindings: CloudflareBindings }>) => 
 app.get('/docs', swaggerUI({ url: '/docs/openapi.json' }));
 
 // ──────────────── RUTAS DE NEGOCIO ────────────────
-// CSE
-app.get('/cse/:clientId', clientIdMatchMiddleware, getCSEForm);
-app.post('/cse/:clientId/steps/:stepId', clientIdMatchMiddleware, updateCSEStep);
-app.post('/cse/:clientId/submit', clientIdMatchMiddleware, submitToInternalReview);
-app.post('/cse/:clientId/internal-review/approve', clientIdMatchMiddleware, approveInternalReview);
-app.post('/cse/:clientId/internal-review/request-corrections', clientIdMatchMiddleware, requestInternalCorrections);
+// Las rutas CSE ya están definidas más arriba, no es necesario duplicarlas
 app.post('/cse/:clientId/authority-review/approve', clientIdMatchMiddleware, approveAuthorityReview);
 app.post('/cse/:clientId/authority-review/request-corrections', clientIdMatchMiddleware, requestAuthorityCorrections);
 // Autoridad

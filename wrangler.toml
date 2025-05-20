@@ -8,7 +8,7 @@ compatibility_date = "2024-05-19"
 # Configuración por defecto (puede ser usada para desarrollo local)
 [vars]
 ENVIRONMENT = "dev"
-SESSION_SECRET = "dev-session-secret-change-in-production"
+SESSION_SECRET = "a9f37679120b142fd2efbbecff749432"
 INTERNAL_INDEX_BASE_URL = "https://internal/index"
 INTERNAL_FORM_BASE_URL = "https://internal/form"
 
@@ -27,7 +27,7 @@ bucket_name = "cse-cloud-dev"
 # ===============================
 # Ambiente de desarrollo (dev)
 [env.dev]
-vars = { ENVIRONMENT = "dev", SESSION_SECRET = "dev-session-secret-change-in-production", INTERNAL_INDEX_BASE_URL = "https://internal/index", INTERNAL_FORM_BASE_URL = "https://internal/form" }
+vars = { ENVIRONMENT = "dev", SESSION_SECRET = "a9f37679120b142fd2efbbecff749432", INTERNAL_INDEX_BASE_URL = "https://internal/index", INTERNAL_FORM_BASE_URL = "https://internal/form" }
 
 [[env.dev.durable_objects.bindings]]
 name = "CSE_DO"
